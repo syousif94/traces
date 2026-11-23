@@ -33,6 +33,8 @@ struct StudioWorkspace: View {
     @State private var keyboardUp = false
     /// A drag on the bar is resizing the panels (vertical) rather than scrolling it.
     @State private var barAxis: Axis?
+    /// A finger is held on the bar reading names: its drag doesn't move the panels.
+    @State private var barScrubbing = false
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var hSize
     private var compact: Bool { hSize == .compact }
@@ -176,7 +178,7 @@ struct StudioWorkspace: View {
                 HStack(spacing: 8) {
                     StudioBar(doc: doc, short: narrow, blocked: barAxis == .vertical,
                               back: onClose, addPart: openLibrary, ask: ask,
-                              contentWidth: { barContent = $0 })
+                              contentWidth: { barContent = $0 }, scrubbing: { barScrubbing = $0 })
                         .fixedSize(horizontal: false, vertical: true)
                     if !barTight { panelsButton }
                 }
@@ -200,6 +202,7 @@ struct StudioWorkspace: View {
     private var barDrag: some Gesture {
         DragGesture(minimumDistance: 8, coordinateSpace: .global)
             .onChanged { v in
+                if barAxis == nil && barScrubbing { barAxis = .horizontal }
                 if barAxis == nil { barAxis = abs(v.translation.height) > abs(v.translation.width) ? .vertical : .horizontal }
                 if barAxis == .vertical && docked { dockResize(v) }
             }
