@@ -1,0 +1,8 @@
+[package]
+name = "traceworks-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "stdio MCP helper: bridges an MCP client (Claude Code etc.) to the running Traceworks app's local socket."
+
+[dependencies]

@@ -1,0 +1,10 @@
+target/
+engine/node_modules/
+app/*.xcodeproj
+app/TraceworksCore.xcframework
+app/Shared/Generated/
+app/Mac/Helpers/
+app/Shared/Resources/engine.js
+build/
+DerivedData/
+.DS_Store

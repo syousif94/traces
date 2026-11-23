@@ -1,0 +1,24 @@
+[package]
+name = "traceworks-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Traceworks core: project files, the agent's tool registry and loop, model providers, the diff applier and git."
+
+[lib]
+crate-type = ["lib", "staticlib"]
+
+[dependencies]
+uniffi = "0.32"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+ureq = { version = "2", features = ["json"] }
+similar = "2"
+diffy = "0.4"
+base64 = "0.22"
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"

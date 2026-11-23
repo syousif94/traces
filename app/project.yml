@@ -1,0 +1,72 @@
+name: Traceworks
+options:
+  bundleIdPrefix: com.sammy
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    SWIFT_STRICT_CONCURRENCY: complete
+    OTHER_LDFLAGS: ["-lz", "-liconv"]
+    "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
+    "EXCLUDED_ARCHS[sdk=macosx*]": x86_64
+targetTemplates:
+  TraceworksApp:
+    sources:
+      - path: Shared
+        excludes: ["Resources/**"]
+      - path: Shared/Resources/engine.js
+        buildPhase: resources
+      - path: Shared/Resources/engine.html
+        buildPhase: resources
+      - path: ../templates
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - framework: TraceworksCore.xcframework
+        embed: false
+      - sdk: Security.framework
+      - sdk: SystemConfiguration.framework
+      - sdk: WebKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sammy.traceworks
+        PRODUCT_NAME: Traceworks
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Traceworks
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Hold the mic button to talk to the agent."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Your speech is transcribed on device and sent to the agent as text."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Connect to a local model server such as LM Studio."
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+targets:
+  Traceworks-iOS:
+    type: application
+    platform: iOS
+    templates: [TraceworksApp]
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_KEY_UIFileSharingEnabled: YES
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
+        INFOPLIST_KEY_UISupportsDocumentBrowser: NO
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+  Traceworks-Mac:
+    type: application
+    platform: macOS
+    templates: [TraceworksApp]
+    settings:
+      base:
+        ENABLE_APP_SANDBOX: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_IDENTITY: "-"
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools

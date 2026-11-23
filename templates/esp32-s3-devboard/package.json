@@ -1,0 +1,7 @@
+{
+  "name": "esp32-s3-devboard",
+  "version": "0.3.0",
+  "type": "module",
+  "main": "index.tsx",
+  "dependencies": { "tscircuit": "0.0.3282" }
+}
