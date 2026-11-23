@@ -20,8 +20,8 @@ pub struct CommitInfo {
 
 pub fn signature(repo: &Repository) -> Signature<'static> {
     match repo.signature() {
-        Ok(s) => Signature::now(s.name().unwrap_or("Traceworks"), s.email().unwrap_or("traceworks@localhost")).unwrap(),
-        Err(_) => Signature::now("Traceworks", "traceworks@localhost").unwrap(),
+        Ok(s) => Signature::now(s.name().unwrap_or("Traces"), s.email().unwrap_or("traces@localhost")).unwrap(),
+        Err(_) => Signature::now("Traces", "traces@localhost").unwrap(),
     }
 }
 

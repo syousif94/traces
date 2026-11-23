@@ -10,7 +10,7 @@ import SwiftUI
 enum Thumbnails {
     static let dir: URL = {
         let d = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Traceworks/Thumbnails", isDirectory: true)
+            .appendingPathComponent("Traces/Thumbnails", isDirectory: true)
         try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         return d
     }()

@@ -1,4 +1,4 @@
-name: Traceworks
+name: Traces
 options:
   bundleIdPrefix: com.sammy
   deploymentTarget:
@@ -18,7 +18,7 @@ settings:
     "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
     "EXCLUDED_ARCHS[sdk=macosx*]": x86_64
 targetTemplates:
-  TraceworksApp:
+  TracesApp:
     sources:
       - path: Shared
         excludes: ["Resources/**"]
@@ -38,18 +38,20 @@ targetTemplates:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sammy.traceworks
-        PRODUCT_NAME: Traceworks
+        PRODUCT_NAME: Traces
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Traceworks
+        INFOPLIST_KEY_CFBundleDisplayName: Traces
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Hold the mic button to talk to the agent."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Your speech is transcribed on device and sent to the agent as text."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Connect to a local model server such as LM Studio."
-        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 targets:
-  Traceworks-iOS:
+  Traces-iOS:
     type: application
     platform: iOS
-    templates: [TraceworksApp]
+    templates: [TracesApp]
+    sources:
+      - path: iOS/Assets.xcassets
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -60,10 +62,12 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-  Traceworks-Mac:
+  Traces-Mac:
     type: application
     platform: macOS
-    templates: [TraceworksApp]
+    templates: [TracesApp]
+    sources:
+      - path: Mac/Assets.xcassets
     settings:
       base:
         ENABLE_APP_SANDBOX: NO

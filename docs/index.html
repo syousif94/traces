@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traces: circuit boards you can talk to</title>
+<meta name="description" content="Traces is a native app for Mac, iPad and iPhone for designing circuit boards as tscircuit code, with a built-in agent.">
+<link rel="icon" href="images/favicon.png">
+<meta property="og:title" content="Traces">
+<meta property="og:description" content="Circuit boards you can talk to. Design PCBs as tscircuit code on Mac, iPad and iPhone, with a built-in agent.">
+<meta property="og:image" content="images/icon.png">
+<style>
+:root {
+  --page: #0c110e; --panel: #131a16; --rule: #223029; --ink: #eef3ef; --muted: #9aa9a0; --faint: #6c7b72;
+  --accent: #3ddc84; --accent-ink: #062611; --copper: #d98c6a; --gold: #e7c779;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 17px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+/* Faint trace pattern behind the hero */
+.hero { position: relative; overflow: hidden; padding: 72px 0 40px; border-bottom: 1px solid var(--rule); }
+.hero::before { content: ""; position: absolute; inset: 0; opacity: .5; pointer-events: none;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(61,220,132,.13) 1px, transparent 1.5px) 0 0 / 22px 22px,
+    radial-gradient(ellipse 70% 60% at 70% 0%, rgba(61,220,132,.16), transparent 70%); }
+.hero .wrap { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
+.brand { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+.brand img { width: 64px; height: 64px; }
+.brand span { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+h1 { font-size: clamp(40px, 6vw, 64px); line-height: 1.03; letter-spacing: -.035em; margin: 0 0 18px; font-weight: 800; }
+h1 em { font-style: normal; color: var(--accent); }
+.lede { color: var(--muted); font-size: 19px; max-width: 34em; margin: 0 0 30px; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 999px; font-weight: 600; font-size: 16px; border: 1px solid var(--rule); color: var(--ink); background: var(--panel); }
+.btn:hover { text-decoration: none; border-color: #355044; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn svg { width: 18px; height: 18px; fill: currentColor; }
+.meta { color: var(--faint); font-size: 14px; margin-top: 14px; }
+.shot-stack { position: relative; min-height: 420px; }
+.shot-stack .ipad { width: 88%; border-radius: 22px; border: 1px solid var(--rule); box-shadow: 0 30px 80px rgba(0,0,0,.55); display: block; }
+.shot-stack .phone { position: absolute; right: 0; bottom: -18px; width: 30%; border-radius: 26px; border: 1px solid var(--rule); box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+section { padding: 72px 0; border-bottom: 1px solid var(--rule); }
+h2 { font-size: 34px; letter-spacing: -.025em; margin: 0 0 10px; }
+.sub { color: var(--muted); margin: 0 0 36px; max-width: 40em; }
+.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 18px; padding: 22px; }
+.card h3 { margin: 0 0 6px; font-size: 17px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+.platforms { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
+.platform { background: var(--panel); border: 1px solid var(--rule); border-radius: 22px; padding: 28px; display: flex; flex-direction: column; }
+.platform h3 { margin: 0 0 4px; font-size: 24px; letter-spacing: -.01em; }
+.platform .req { color: var(--faint); font-size: 14px; margin-bottom: 16px; }
+.platform p, .platform li { color: var(--muted); font-size: 15px; }
+.platform ol { padding-left: 20px; margin: 0 0 20px; }
+.platform .ctas { margin-top: auto; }
+.gallery { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 18px; align-items: start; }
+.gallery img { width: 100%; border-radius: 18px; border: 1px solid var(--rule); display: block; }
+.gallery figcaption { color: var(--faint); font-size: 13px; margin-top: 8px; }
+code { font: 14px ui-monospace, "SF Mono", Menlo, monospace; background: #18211c; border: 1px solid var(--rule); padding: 2px 6px; border-radius: 6px; }
+pre { white-space: pre-wrap; word-break: break-all; background: #101713; border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; overflow-x: auto; }
+pre code { background: none; border: 0; padding: 0; }
+footer { padding: 36px 0 60px; color: var(--faint); font-size: 14px; }
+footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 900px) {
+  .hero .wrap { grid-template-columns: 1fr; }
+  .features { grid-template-columns: 1fr 1fr; }
+  .platforms { grid-template-columns: 1fr; }
+  .gallery { grid-template-columns: 1fr 1fr; }
+  .gallery figure:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .features { grid-template-columns: 1fr; }
+  .shot-stack { min-height: 0; }
+}
+figure { margin: 0; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="brand"><img src="images/icon.png" alt=""><span>Traces</span></div>
+      <h1>Circuit boards you can <em>talk to</em>.</h1>
+      <p class="lede">Design PCBs as <a href="https://tscircuit.com">tscircuit</a> code on your Mac, iPad and iPhone. Describe a board and the built-in agent writes it, places parts, routes and runs DRC, on a branch you review.</p>
+      <div class="ctas">
+        <a class="btn primary dl-link" href="https://github.com/syousif94/traces/releases/latest/download/Traces.dmg">
+          <svg viewBox="0 0 24 24"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.5-1-2.5-3.9zM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1 .1 2.1-.6 2.8-1.4z"/></svg>
+          Download for Mac
+        </a>
+        <a class="btn" href="#ios">iPhone &amp; iPad</a>
+        <a class="btn" href="https://github.com/syousif94/traces">Source</a>
+      </div>
+      <div class="meta"><span class="version">Free</span> · macOS 26 or later · Apple silicon</div>
+    </div>
+    <div class="shot-stack">
+      <img class="ipad" src="screenshots/ipad-studio.png" alt="Traces on iPad: the PCB view, parts list and agent panel">
+      <img class="phone" src="screenshots/phone-start.png" alt="Traces on iPhone: the start page with a 3D picture of a board">
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Real boards, real code</h2>
+    <p class="sub">Every project is a plain tscircuit folder with its own git history, so it opens in the <code>tsci</code> CLI too. Traces runs the open-source tscircuit packages on device and draws them natively.</p>
+    <div class="features">
+      <div class="card"><h3><span class="dot" style="background:var(--accent)"></span>An agent on a branch</h3><p>Ask for a board or a change. The agent edits code with the same tools you use, compiles and runs DRC, and leaves a diff for you to accept or discard.</p></div>
+      <div class="card"><h3><span class="dot" style="background:var(--copper)"></span>Schematic, PCB, 3D, code</h3><p>Four live views of one design, compiled 300 ms after each edit. Drag, rotate, place vias and route by touch; edits rewrite the source.</p></div>
+      <div class="card"><h3><span class="dot" style="background:var(--gold)"></span>Parts that exist</h3><p>Search JLCPCB and DigiKey. Choosing a part imports its real symbol and footprint, with supplier part numbers attached.</p></div>
+      <div class="card"><h3><span class="dot" style="background:#7aa6d6"></span>Ready to fab</h3><p>Export Gerbers, drill files, BOM and pick-and-place in one zip, named after the commit. Export is blocked while DRC has errors.</p></div>
+      <div class="card"><h3><span class="dot" style="background:#c9a0e8"></span>Your models</h3><p>Claude with your Anthropic API key, or any local OpenAI-compatible server such as LM Studio. Keys stay in the Keychain.</p></div>
+      <div class="card"><h3><span class="dot" style="background:#e8e8e8"></span>MCP on the Mac</h3><p>Turn on MCP in Settings and Claude Code or Claude Desktop can drive the open board with the same tools.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Get Traces</h2>
+    <p class="sub">One app for Mac, iPad and iPhone. The Mac app is signed and notarized; the iPhone and iPad app installs over the air through SelfStore.</p>
+    <div class="platforms">
+      <div class="platform" id="mac">
+        <h3>Mac</h3>
+        <div class="req">macOS 26 or later · Apple silicon · <span class="version-short">latest</span></div>
+        <ol>
+          <li>Download <code>Traces.dmg</code>.</li>
+          <li>Drag Traces into Applications and open it.</li>
+          <li>Boards live in <code>~/Documents/Traces</code>.</li>
+        </ol>
+        <p>To connect Claude Code, turn on MCP in Settings, then:</p>
+        <pre><code>claude mcp add traces -- /Applications/Traces.app/Contents/MacOS/Traces --mcp</code></pre>
+        <div class="ctas">
+          <a class="btn primary dl-link" href="https://github.com/syousif94/traces/releases/latest/download/Traces.dmg">Download for Mac</a>
+          <a class="btn" href="https://github.com/syousif94/traces/releases">All releases</a>
+        </div>
+      </div>
+      <div class="platform" id="ios">
+        <h3>iPhone &amp; iPad</h3>
+        <div class="req">iOS / iPadOS 26 or later</div>
+        <ol>
+          <li>Install <a href="https://syousif94.github.io/SelfStore/">SelfStore</a> on your Mac and set up signing.</li>
+          <li>Add this repo in SelfStore: <code>syousif94/traces</code>. Its <code>selfstore.yml</code> points at a prebuilt <code>Traces-iOS.ipa</code>.</li>
+          <li>Install Traces on your iPhone or iPad from SelfStore over the air.</li>
+        </ol>
+        <p>Or build it yourself from source with Xcode (see the README).</p>
+        <div class="ctas">
+          <a class="btn primary" href="https://syousif94.github.io/SelfStore/">Get SelfStore</a>
+          <a class="btn" href="https://github.com/syousif94/traces/blob/main/selfstore.yml">selfstore.yml</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>On every screen</h2>
+    <p class="sub">The same studio everywhere: the live view full-bleed, one glass bar, and panels for parts, layers, files, history and the agent.</p>
+    <div class="gallery">
+      <figure><img src="screenshots/ipad-studio.png" alt="iPad studio"><figcaption>iPad: PCB view with parts and the agent</figcaption></figure>
+      <figure><img src="screenshots/phone-studio.png" alt="iPhone studio"><figcaption>iPhone: the studio</figcaption></figure>
+      <figure><img src="screenshots/phone-start.png" alt="iPhone start page"><figcaption>iPhone: your boards</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Traces is an independent app built on the open-source tscircuit packages (MIT). It is not an official tscircuit product.</span>
+    <a href="https://github.com/syousif94/traces">github.com/syousif94/traces</a>
+  </div>
+</footer>
+
+<script>
+// Download links follow latest.json, which scripts/deploy.sh writes for every release.
+fetch('latest.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (info) {
+  if (!info) return;
+  document.querySelectorAll('.dl-link').forEach(function (a) { a.href = info.dmg; });
+  var mb = info.dmgSize ? ' · ' + Math.round(info.dmgSize / 1e6) + ' MB' : '';
+  document.querySelectorAll('.version').forEach(function (s) { s.textContent = 'Version ' + info.version + mb + ' · free'; });
+  document.querySelectorAll('.version-short').forEach(function (s) { s.textContent = 'version ' + info.version; });
+}).catch(function () {});
+</script>
+</body>
+</html>

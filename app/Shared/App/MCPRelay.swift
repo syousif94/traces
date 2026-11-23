@@ -2,7 +2,7 @@
 import Foundation
 import Darwin
 
-/// `Traceworks --mcp`: the stdio side of the MCP server. An MCP client launches the app binary with
+/// `Traces --mcp`: the stdio side of the MCP server. An MCP client launches the app binary with
 /// this flag; it relays newline-delimited JSON-RPC between stdio and the running app's socket.
 enum MCPRelay {
     static func run() -> Never {
@@ -17,7 +17,7 @@ enum MCPRelay {
             // Answer the client's first request rather than hanging.
             let line = readLine() ?? ""
             let id = (try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])?["id"] ?? NSNull()
-            let obj: [String: Any] = ["jsonrpc": "2.0", "id": id, "error": ["code": -32000, "message": "Traceworks is not running, or its MCP server is off (Settings ▸ MCP)."]]
+            let obj: [String: Any] = ["jsonrpc": "2.0", "id": id, "error": ["code": -32000, "message": "Traces is not running, or its MCP server is off (Settings ▸ MCP)."]]
             if let d = try? JSONSerialization.data(withJSONObject: obj) { FileHandle.standardOutput.write(d + Data([0x0A])) }
             exit(1)
         }

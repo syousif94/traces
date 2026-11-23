@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct TraceworksApp: App {
+struct TracesApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -11,7 +11,7 @@ struct TraceworksApp: App {
         #if os(macOS)
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1600, height: 1000)
-        .commands { TraceworksCommands() }
+        .commands { TracesCommands() }
         #endif
     }
 }
@@ -67,7 +67,7 @@ struct RootView: View {
 }
 
 #if os(macOS)
-struct TraceworksCommands: Commands {
+struct TracesCommands: Commands {
     @FocusedValue(\.document) private var doc
     var body: some Commands {
         CommandGroup(replacing: .undoRedo) {

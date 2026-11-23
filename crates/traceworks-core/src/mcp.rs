@@ -23,7 +23,7 @@ pub fn mcp_handle(project: Arc<Project>, host: Arc<dyn EngineHost>, request: Str
             "capabilities": {"tools": {"listChanged": false}},
             "serverInfo": {"name": "traceworks", "version": env!("CARGO_PKG_VERSION")},
             "instructions": format!(
-                "Tools for the tscircuit project \"{}\" open in Traceworks. Writes go to an agent branch the user reviews in the app; compile after edits and run_drc after placement or routing changes.",
+                "Tools for the tscircuit project \"{}\" open in Traces. Writes go to an agent branch the user reviews in the app; compile after edits and run_drc after placement or routing changes.",
                 project.name()
             ),
         }),

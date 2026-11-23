@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Projects are plain folders. The default library is ~/Documents/Traceworks on the Mac and the
+/// Projects are plain folders. The default library is ~/Documents/Traces on the Mac and the
 /// app's Documents folder on iPhone/iPad (visible in Files). Folders opened elsewhere are remembered
 /// as security-scoped bookmarks.
 @MainActor @Observable
@@ -19,7 +19,14 @@ final class ProjectStore {
     static var libraryURL: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         #if os(macOS)
-        return docs.appendingPathComponent("Traceworks", isDirectory: true)
+        let url = docs.appendingPathComponent("Traces", isDirectory: true)
+        // The app was called Traceworks: move its old library folder over once.
+        let old = docs.appendingPathComponent("Traceworks", isDirectory: true)
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: url.path), fm.fileExists(atPath: old.path) {
+            try? fm.moveItem(at: old, to: url)
+        }
+        return url
         #else
         return docs
         #endif

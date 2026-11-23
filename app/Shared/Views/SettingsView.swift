@@ -63,7 +63,7 @@ struct SettingsView: View {
                     LabeledContent("tscircuit engine", value: EngineBridge.shared.version)
                     LabeledContent("Core", value: coreVersion())
                 } header: { Text("About") } footer: {
-                    Text("Traceworks is an independent app built on the open-source tscircuit packages (MIT). It is not an official tscircuit product.")
+                    Text("Traces is an independent app built on the open-source tscircuit packages (MIT). It is not an official tscircuit product.")
                 }
             }
             .formStyle(.grouped)

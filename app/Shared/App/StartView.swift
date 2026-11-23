@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Traceworks' home, laid out like Nurby's: describe a board to start one with the agent, start
+/// Traces' home, laid out like Nurby's: describe a board to start one with the agent, start
 /// from a template, open a folder, or pick up a recent project (each with a 3D picture of its board).
 struct StartView: View {
     @Environment(\.palette) private var palette
@@ -72,7 +72,7 @@ struct StartView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Traceworks").font(.largeTitle.weight(.bold))
+                Text("Traces").font(.largeTitle.weight(.bold))
                 Text("Circuit boards you can talk to").font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
@@ -159,7 +159,7 @@ struct StartView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Recent boards").font(.title3.weight(.semibold))
             if store.items.isEmpty {
-                Text("Your boards appear here. Each is a plain tscircuit folder with its own git history, in the Files app under Traceworks (on the Mac, Documents › Traceworks).")
+                Text("Your boards appear here. Each is a plain tscircuit folder with its own git history, in the Files app under Traces (on the Mac, Documents › Traces).")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {

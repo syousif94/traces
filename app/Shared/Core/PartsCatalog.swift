@@ -80,7 +80,7 @@ enum PartsCatalog {
             switch self {
             case .http(let c, let m): "The parts service answered \(c). \(m)"
             case .notFound(let p): "EasyEDA has no symbol and footprint for \(p)."
-            case .noFootprint(let p): "No footprint found for \(p): it isn't stocked at JLCPCB and its package isn't one Traceworks can draw. Ask the agent to make one."
+            case .noFootprint(let p): "No footprint found for \(p): it isn't stocked at JLCPCB and its package isn't one Traces can draw. Ask the agent to make one."
             case .noDigiKeyKey: "Add your DigiKey API client ID and secret in Settings to search DigiKey."
             case .rateLimited: "EasyEDA is rate-limiting this network. Wait a couple of minutes and try again."
             }

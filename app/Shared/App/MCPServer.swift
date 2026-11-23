@@ -21,14 +21,14 @@ final class MCPServer: @unchecked Sendable {
     }
 
     static var socketPath: String {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Traceworks", isDirectory: true)
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Traces", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("mcp.sock").path
     }
 
-    /// The app binary doubles as the stdio relay (`Traceworks --mcp`), so the bundle has one signed executable.
+    /// The app binary doubles as the stdio relay (`Traces --mcp`), so the bundle has one signed executable.
     var helperCommand: String {
-        "claude mcp add traceworks -- \"\(Bundle.main.executablePath ?? "Traceworks")\" --mcp"
+        "claude mcp add traces -- \"\(Bundle.main.executablePath ?? "Traces")\" --mcp"
     }
 
     func start() {
@@ -88,7 +88,7 @@ final class MCPServer: @unchecked Sendable {
         guard let p, let h else {
             let id = (try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])?["id"]
             guard let id else { return nil }
-            let obj: [String: Any] = ["jsonrpc": "2.0", "id": id, "error": ["code": -32000, "message": "No project is open in Traceworks."]]
+            let obj: [String: Any] = ["jsonrpc": "2.0", "id": id, "error": ["code": -32000, "message": "No project is open in Traces."]]
             return String(decoding: (try? JSONSerialization.data(withJSONObject: obj)) ?? Data(), as: UTF8.self)
         }
         return mcpHandle(project: p, host: h, request: line)
