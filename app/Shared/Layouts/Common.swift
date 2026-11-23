@@ -41,20 +41,19 @@ struct LiveView: View {
 }
 
 /// The one bar of the studio, at the bottom: back, the view switcher, the view's tools, the PCB
-/// layers, design-rule status and the panels button, in groups with dividers. It scrolls sideways
-/// when it doesn't fit. Dragging it up or down resizes or hides the panels (the studio does that);
+/// layers and design-rule status, in groups with dividers. It scrolls sideways when it doesn't fit,
+/// and reports the width it wants so the studio can move the panels button (`PanelsButton`) above it. Dragging it up or down resizes or hides the panels (the studio does that);
 /// `blocked` is set while it does, so the tool under the finger doesn't run on release.
 struct StudioBar: View {
     @Environment(\.palette) private var palette
     @Bindable var doc: DocumentModel
     var short = false
     var blocked = false
-    var panelsShown = true
-    var panelsSymbol = "sidebar.right"
     var back: () -> Void
     var addPart: () -> Void
     var ask: (String) -> Void
-    var togglePanels: () -> Void
+    /// The width the bar's contents want, unscrolled.
+    var contentWidth: (CGFloat) -> Void = { _ in }
 
     private let barLayers: [PCBLayer] = [.topCopper, .bottomCopper, .silk, .ratsnest]
 
@@ -76,10 +75,9 @@ struct StudioBar: View {
                     }
                     divider
                     drc
-                    divider
-                    item(panelsShown ? "Hide panels" : "Show panels", panelsSymbol, active: panelsShown, action: togglePanels)
                 }
                 .padding(.horizontal, 6)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth($0) }
         }
         .scrollClipDisabled()
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
@@ -196,6 +194,27 @@ struct StudioBar: View {
 
     private func select(_ t: CanvasTool) {
         doc.tool = t; doc.measureA = nil; doc.measureB = nil; doc.routeFrom = nil
+    }
+}
+
+/// Show or hide the panels, in its own glass circle beside the bar (above it when space is tight).
+struct PanelsButton: View {
+    @Environment(\.palette) private var palette
+    var shown: Bool
+    var symbol: String
+    var blocked = false
+    var action: () -> Void
+    var body: some View {
+        let name = shown ? "Hide panels" : "Show panels"
+        Button { if !blocked { action() } } label: {
+            Image(systemName: symbol).font(.system(size: 19))
+                .foregroundStyle(shown ? palette.accent : Color.primary)
+                .frame(width: 56, height: 56).contentShape(.circle)
+        }
+        .buttonStyle(OpButtonStyle(name: name))
+        .glassEffect(in: .circle)
+        .accessibilityLabel(name)
+        .accessibilityAddTraits(shown ? .isSelected : [])
     }
 }
 

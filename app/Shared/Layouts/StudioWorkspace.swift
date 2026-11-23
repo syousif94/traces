@@ -149,20 +149,40 @@ struct StudioWorkspace: View {
 
     // MARK: Bar
 
-    /// The bar, centred in the part of the screen the panels leave open, above the dock.
+    @Namespace private var barSpace
+    /// The width the bar's tools want (reported by the bar).
+    @State private var barContent: CGFloat = 0
+    /// The room for the bar: the screen less the sidebar and the margins.
+    private var barRoom: CGFloat { screen.width - (docked ? 0 : sideCover) - margin * 2 }
+    /// Not enough room for the bar's tools and the panels button side by side.
+    private var barTight: Bool { barContent > 0 && barContent + 8 + 56 > barRoom }
+
+    private var panelsButton: some View {
+        PanelsButton(shown: !sidebarAway,
+                     symbol: docked ? "rectangle.bottomhalf.inset.filled" : "sidebar.right",
+                     blocked: barAxis == .vertical,
+                     action: { sidebarAway ? reveal() : hide() })
+            .matchedGeometryEffect(id: "panels", in: barSpace)
+    }
+
+    /// The bar, centred in the part of the screen the panels leave open, above the dock. The panels
+    /// button sits to its right, or above its right end when the bar's tools need the room.
     private var bar: some View {
         HStack(spacing: 0) {
-            VStack(spacing: 10) {
+            VStack(alignment: .trailing, spacing: 10) {
                 Spacer()
-                if doc.tool == .place && doc.viewMode == .pcb { PlacingChip(doc: doc) }
-                StudioBar(doc: doc, short: narrow, blocked: barAxis == .vertical,
-                          panelsShown: !sidebarAway,
-                          panelsSymbol: docked ? "rectangle.bottomhalf.inset.filled" : "sidebar.right",
-                          back: onClose, addPart: openLibrary, ask: ask,
-                          togglePanels: { sidebarAway ? reveal() : hide() })
-                    .fixedSize(horizontal: false, vertical: true)
-                    .simultaneousGesture(barDrag)
+                if barTight { panelsButton }
+                if doc.tool == .place && doc.viewMode == .pcb { PlacingChip(doc: doc).frame(maxWidth: .infinity) }
+                HStack(spacing: 8) {
+                    StudioBar(doc: doc, short: narrow, blocked: barAxis == .vertical,
+                              back: onClose, addPart: openLibrary, ask: ask,
+                              contentWidth: { barContent = $0 })
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !barTight { panelsButton }
+                }
             }
+            .simultaneousGesture(barDrag)
+            .animation(.snappy(duration: 0.3), value: barTight)
             .padding(.horizontal, margin)
             .padding(.bottom, 14 + dockVisible)
             // While typing to the agent the keyboard takes the room the bar had.
