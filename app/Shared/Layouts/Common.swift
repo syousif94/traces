@@ -1,142 +1,90 @@
 import SwiftUI
 
-/// The full-bleed view under the floating panels. `fitInsets` is the room the panels cover; the
-/// 2D views fit the board into what is left, and the code editor is padded clear of them.
+/// The full-bleed views under the floating bar and panels. All four stay loaded, so switching is
+/// instant and cross-fades, and each keeps its own zoom. `fitInsets` is the room the bar and panels
+/// cover: the 2D views fit and centre the board in what is left, the 3D view is stretched past the
+/// screen edges so its centre is the middle of the open area, and the code editor is padded clear.
 struct LiveView: View {
     @Bindable var doc: DocumentModel
     var compact = false
     var fitInsets = EdgeInsets()
     var body: some View {
-        switch doc.viewMode {
-        case .schematic: SchematicView(doc: doc, fitInsets: fitInsets)
-        case .pcb: PCBView(doc: doc, compact: compact, fitInsets: fitInsets)
-        case .threeD: Board3DView(doc: doc)
-        case .code:
-            CodePane(doc: doc)
-                .clipShape(.rect(cornerRadius: 24, style: .continuous))
-                .padding(.top, fitInsets.top).padding(.leading, max(fitInsets.leading, 12))
-                .padding(.trailing, max(fitInsets.trailing, 12)).padding(.bottom, max(fitInsets.bottom - 70, 12))
-                .background(Palette.code.canvas)
+        ZStack {
+            layer(.schematic) { SchematicView(doc: doc, fitInsets: fitInsets) }
+            layer(.pcb) { PCBView(doc: doc, compact: compact, fitInsets: fitInsets) }
+            layer(.threeD) {
+                Board3DView(doc: doc)
+                    .padding(.leading, -max(fitInsets.trailing - fitInsets.leading, 0))
+                    .padding(.trailing, -max(fitInsets.leading - fitInsets.trailing, 0))
+                    .padding(.top, -max(fitInsets.bottom - fitInsets.top, 0))
+                    .padding(.bottom, -max(fitInsets.top - fitInsets.bottom, 0))
+            }
+            layer(.code) {
+                CodePane(doc: doc)
+                    .clipShape(.rect(cornerRadius: 24, style: .continuous))
+                    .padding(.top, max(fitInsets.top, 12)).padding(.leading, max(fitInsets.leading, 12))
+                    .padding(.trailing, max(fitInsets.trailing, 12)).padding(.bottom, max(fitInsets.bottom, 12))
+                    .background(Palette.code.canvas)
+            }
         }
+    }
+
+    private func layer(_ mode: ViewMode, @ViewBuilder _ content: () -> some View) -> some View {
+        let on = doc.viewMode == mode
+        return content()
+            .opacity(on ? 1 : 0)
+            .scaleEffect(on ? 1 : 0.985)
+            .allowsHitTesting(on)
+            .accessibilityHidden(!on)
+            .zIndex(on ? 1 : 0)
     }
 }
 
-/// Schematic / PCB / 3D / Code in one glass capsule, next to the back button.
-struct ViewSwitcher: View {
+/// The one bar of the studio, at the bottom: back, the view switcher, the view's tools, the PCB
+/// layers, design-rule status and the panels button, in groups with dividers. It scrolls sideways
+/// when it doesn't fit. Dragging it up or down resizes or hides the panels (the studio does that);
+/// `blocked` is set while it does, so the tool under the finger doesn't run on release.
+struct StudioBar: View {
+    @Environment(\.palette) private var palette
     @Bindable var doc: DocumentModel
     var short = false
-    var body: some View {
-        HStack(spacing: 2) {
-            ForEach(ViewMode.allCases) { m in
-                Button { withAnimation(.snappy(duration: 0.25)) { doc.viewMode = m } } label: {
-                    Text(short ? m.short : m.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1).fixedSize()
-                        .padding(.horizontal, short ? 10 : 14).frame(height: 40)
-                        .background(doc.viewMode == m ? Color.primary.opacity(0.1) : .clear, in: .capsule)
-                        .contentShape(.capsule)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(doc.viewMode == m ? Color.primary : Color.secondary)
-                .accessibilityAddTraits(doc.viewMode == m ? .isSelected : [])
-            }
-        }
-        .padding(6)
-        .glassEffect(in: .capsule)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("View")
-    }
-}
-
-/// Compile and design-rule state; tap for the list.
-struct DRCPill: View {
-    @Bindable var doc: DocumentModel
-    var compact = false
-    var body: some View {
-        Button { doc.showDRC = true } label: {
-            HStack(spacing: 7) {
-                if doc.drcRunning || doc.compiling { ProgressView().controlSize(.small) }
-                else { Circle().fill(color).frame(width: 8, height: 8) }
-                if !compact || doc.drcErrors + doc.drcWarnings > 0 {
-                    Text(compact ? "\(doc.drcErrors > 0 ? doc.drcErrors : doc.drcWarnings)" : label)
-                        .font(.subheadline.weight(.semibold)).lineLimit(1).fixedSize()
-                }
-            }
-            .padding(.horizontal, compact ? 14 : 16).frame(minWidth: 52).frame(height: 52)
-            .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .capsule)
-        .accessibilityLabel("Design rule check: \(doc.drcErrors) errors, \(doc.drcWarnings) warnings")
-    }
-    private var color: Color { !doc.compileErrors.filter { $0.type == "compile_error" }.isEmpty || doc.drcErrors > 0 ? Theme.danger : doc.drcWarnings > 0 ? Theme.warning : Theme.success }
-    private var label: String {
-        if doc.compiling { return "Compiling" }
-        if doc.compileErrors.contains(where: { $0.type == "compile_error" }) { return "Error" }
-        if doc.drcErrors > 0 { return "DRC \(doc.drcErrors)" }
-        if doc.drcWarnings > 0 { return "DRC \(doc.drcWarnings)" }
-        return "DRC"
-    }
-}
-
-/// Icons-only glass capsule of board tools (Nurby's operations bar). Pressing shows the tool's
-/// name; the active tool stays tinted. Add part opens the parts library in the sidebar.
-struct ToolsBar: View {
-    @Environment(\.palette) private var palette
-
-    @Bindable var doc: DocumentModel
+    var blocked = false
+    var panelsShown = true
+    var panelsSymbol = "sidebar.right"
+    var back: () -> Void
     var addPart: () -> Void
     var ask: (String) -> Void
+    var togglePanels: () -> Void
 
-    private enum Item: Identifiable {
-        case tool(CanvasTool), library, agent(String, String, String), action(String, String, () -> Void)
-        var id: String {
-            switch self {
-            case .tool(let t): t.rawValue
-            case .library: "library"
-            case .agent(let n, _, _): n
-            case .action(let n, _, _): n
-            }
-        }
-    }
-
-    private var items: [Item] {
-        if doc.viewMode == .schematic { return [.tool(.select), .library, .agent("Ask about the schematic", "sparkles", "")] }
-        return [
-            .tool(.select), .library, .tool(.route), .tool(.via), .tool(.measure),
-            .agent("Autoroute", "point.3.filled.connected.trianglepath.dotted", "Route every unrouted connection, then run DRC."),
-            .agent("Fix DRC", "checkmark.shield", "Fix the DRC errors."),
-            .action("Fit", "arrow.up.left.and.arrow.down.right", { doc.fitRequested += 1 }),
-        ]
-    }
+    private let barLayers: [PCBLayer] = [.topCopper, .bottomCopper, .silk, .ratsnest]
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 2) {
-                ForEach(items) { item in
-                    switch item {
-                    case .tool(let t):
-                        Button { select(t) } label: { icon(t.icon, active: doc.tool == t) }
-                            .buttonStyle(OpButtonStyle(name: t.label)).accessibilityLabel(t.label)
-                            .accessibilityAddTraits(doc.tool == t ? .isSelected : [])
-                    case .library:
-                        Button(action: addPart) { icon("plus.square.on.square", active: doc.tool == .place) }
-                            .buttonStyle(OpButtonStyle(name: "Add part")).accessibilityLabel("Add part")
-                    case .agent(let name, let symbol, let prompt):
-                        Button { ask(prompt) } label: { icon(symbol, active: false) }
-                            .buttonStyle(OpButtonStyle(name: name)).accessibilityLabel(name)
-                    case .action(let name, let symbol, let run):
-                        Button(action: run) { icon(symbol, active: false) }
-                            .buttonStyle(OpButtonStyle(name: name)).accessibilityLabel(name)
+                HStack(spacing: 2) {
+                    item("All projects", "chevron.left", weight: .semibold, action: back)
+                    divider
+                    switcher
+                    if !tools.isEmpty {
+                        divider
+                        ForEach(tools, id: \.name) { t in
+                            item(t.name, t.symbol, active: t.active, action: t.run)
+                        }
                     }
+                    if doc.viewMode == .pcb {
+                        divider
+                        ForEach(barLayers) { l in layerToggle(l) }
+                    }
+                    divider
+                    drc
+                    divider
+                    item(panelsShown ? "Hide panels" : "Show panels", panelsSymbol, active: panelsShown, action: togglePanels)
                 }
-            }
-            .padding(.horizontal, 8)
+                .padding(.horizontal, 6)
         }
         .scrollClipDisabled()
-        .frame(maxWidth: CGFloat(items.count) * 44 + 16)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .frame(height: 56)
-        // Clip the icons to the capsule, but leave room above it for a pressed button's name.
+        // Clip to the capsule, but leave room above it for a pressed button's name.
         .mask {
             VStack(spacing: 0) {
                 Rectangle().frame(height: 60)
@@ -147,15 +95,107 @@ struct ToolsBar: View {
         .glassEffect(in: .capsule)
     }
 
-    private func select(_ t: CanvasTool) {
-        doc.tool = t; doc.measureA = nil; doc.measureB = nil; doc.routeFrom = nil
+    // MARK: Groups
+
+    private var switcher: some View {
+        HStack(spacing: 2) {
+            ForEach(ViewMode.allCases) { m in
+                Button { guard !blocked else { return }; withAnimation(.snappy(duration: 0.3)) { doc.viewMode = m } } label: {
+                    Text(short ? m.short : m.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1).fixedSize()
+                        .padding(.horizontal, short ? 10 : 13).frame(height: 40)
+                        .background(doc.viewMode == m ? palette.accent.opacity(0.16) : .clear, in: .capsule)
+                        .foregroundStyle(doc.viewMode == m ? palette.accent : Color.secondary)
+                        .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(doc.viewMode == m ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("View")
     }
 
-    private func icon(_ symbol: String, active: Bool) -> some View {
-        Image(systemName: symbol).font(.system(size: 19)).frame(width: 42, height: 44)
-            .foregroundStyle(active ? palette.accent : Color.primary)
-            .background(active ? palette.accent.opacity(0.15) : .clear, in: .rect(cornerRadius: 19))
-            .contentShape(.rect)
+    private struct Tool { let name: String; let symbol: String; var active = false; let run: () -> Void }
+
+    private var tools: [Tool] {
+        let pick = { (t: CanvasTool) in Tool(name: t.label, symbol: t.icon, active: doc.tool == t) { select(t) } }
+        let fit = Tool(name: "Fit", symbol: "arrow.up.left.and.arrow.down.right") { doc.fitRequested += 1 }
+        let add = Tool(name: "Add part", symbol: "plus.square.on.square", active: doc.tool == .place, run: addPart)
+        switch doc.viewMode {
+        case .schematic:
+            return [pick(.select), add, Tool(name: "Ask about the schematic", symbol: "sparkles") { ask("") }, fit]
+        case .pcb:
+            return [pick(.select), add, pick(.route), pick(.via), pick(.measure),
+                    Tool(name: "Autoroute", symbol: "point.3.filled.connected.trianglepath.dotted") { ask("Route every unrouted connection, then run DRC.") },
+                    Tool(name: "Fix DRC", symbol: "checkmark.shield") { ask("Fix the DRC errors.") },
+                    fit]
+        case .threeD:
+            return [Tool(name: "Ask about the board", symbol: "sparkles") { ask("") }]
+        case .code:
+            return [Tool(name: "Ask about the code", symbol: "sparkles") { ask("") }]
+        }
+    }
+
+    private func layerToggle(_ l: PCBLayer) -> some View {
+        let on = doc.layerVisible[l] ?? true
+        return Button { guard !blocked else { return }; doc.layerVisible[l] = !on } label: {
+            ZStack {
+                Circle().fill(l.color.opacity(on ? 1 : 0.18)).frame(width: 14, height: 14)
+                Circle().strokeBorder(l.color, lineWidth: 1.5).frame(width: 14, height: 14)
+            }
+            .frame(width: 36, height: 44).contentShape(.rect)
+        }
+        .buttonStyle(OpButtonStyle(name: "\(on ? "Hide" : "Show") \(l.rawValue.lowercased())"))
+        .accessibilityLabel("\(l.rawValue): \(on ? "shown" : "hidden")")
+    }
+
+    private var drc: some View {
+        Button { guard !blocked else { return }; doc.showDRC = true } label: {
+            HStack(spacing: 6) {
+                if doc.drcRunning || doc.compiling { ProgressView().controlSize(.small) }
+                else { Circle().fill(drcColor).frame(width: 8, height: 8) }
+                Text(drcLabel).font(.subheadline.weight(.semibold)).lineLimit(1).fixedSize()
+            }
+            .padding(.horizontal, 10).frame(height: 44).contentShape(.rect)
+        }
+        .buttonStyle(OpButtonStyle(name: "Design rules"))
+        .accessibilityLabel("Design rule check: \(doc.drcErrors) errors, \(doc.drcWarnings) warnings")
+    }
+
+    private var drcColor: Color {
+        !doc.compileErrors.filter { $0.type == "compile_error" }.isEmpty || doc.drcErrors > 0 ? Theme.danger : doc.drcWarnings > 0 ? Theme.warning : Theme.success
+    }
+
+    private var drcLabel: String {
+        if doc.compiling { return short ? "" : "Compiling" }
+        if doc.compileErrors.contains(where: { $0.type == "compile_error" }) { return "Error" }
+        let n = doc.drcErrors > 0 ? doc.drcErrors : doc.drcWarnings
+        return n > 0 ? (short ? "\(n)" : "DRC \(n)") : "DRC"
+    }
+
+    // MARK: Pieces
+
+    private var divider: some View {
+        Rectangle().fill(.primary.opacity(0.14)).frame(width: 1, height: 24).padding(.horizontal, 5)
+    }
+
+    private func item(_ name: String, _ symbol: String, active: Bool = false, weight: Font.Weight = .regular, action: @escaping () -> Void) -> some View {
+        Button { if !blocked { action() } } label: {
+            Image(systemName: symbol).font(.system(size: 19, weight: weight)).frame(width: 42, height: 44)
+                .foregroundStyle(active ? palette.accent : Color.primary)
+                .background(active ? palette.accent.opacity(0.15) : .clear, in: .rect(cornerRadius: 19))
+                .contentShape(.rect)
+        }
+        .buttonStyle(OpButtonStyle(name: name))
+        .accessibilityLabel(name)
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
+    private func select(_ t: CanvasTool) {
+        doc.tool = t; doc.measureA = nil; doc.measureB = nil; doc.routeFrom = nil
     }
 }
 
@@ -217,7 +257,7 @@ struct WorkspaceChrome: ViewModifier {
     func body(content: Content) -> some View {
         content
             .overlay(alignment: .top) {
-                if let b = doc.banner { BannerView(banner: b).padding(.top, 76).onTapGesture { doc.banner = nil } }
+                if let b = doc.banner { BannerView(banner: b).padding(.top, 20).onTapGesture { doc.banner = nil } }
             }
             .animation(.snappy, value: doc.banner)
             .sheet(isPresented: $doc.showDRC) { DRCSheet(doc: doc) }

@@ -182,13 +182,13 @@ struct SchematicView: View {
             .simultaneousGesture(MagnifyGesture()
                 .onChanged { v in
                     if zoomStart == nil { zoomStart = t.scale; userMoved = true }
-                    t.scale = min(800, max(4, (zoomStart ?? t.scale) * v.magnification))
+                    t.zoom(to: min(800, max(4, (zoomStart ?? t.scale) * v.magnification)), about: v.startLocation)
                 }
                 .onEnded { _ in zoomStart = nil })
             .onTapGesture(count: 2) { userMoved = false; fit(geo.size, animated: true) }
             .onTapGesture { loc in doc.select(doc.circuit.schHitTest(t.toBoard(loc))?.name, reveal: true) }
             #if os(macOS)
-            .modifier(ScrollZoom(t: $t))
+            .modifier(ScrollZoom(t: $t) { userMoved = true })
             #endif
             .onAppear { lastSize = geo.size; t.size = geo.size; fit(geo.size) }
             .onChange(of: geo.size) { _, s in
@@ -197,24 +197,20 @@ struct SchematicView: View {
                 lastSize = s
             }
             .onChange(of: doc.circuit.elementCount) { _, _ in if !fitted { fit(geo.size) } }
-            .onChange(of: fitInsets) { _, _ in fit(geo.size, animated: true) }
-            .onChange(of: doc.fitRequested) { _, _ in fit(geo.size, animated: true) }
+            .onChange(of: fitInsets) { old, new in
+                if userMoved { t.recentre(from: old, to: new) } else { fit(geo.size) }
+            }
+            .onChange(of: doc.fitRequested) { _, _ in userMoved = false; fit(geo.size, animated: true) }
             .accessibilityLabel("Schematic view")
         }
     }
 
-    /// Fit the drawing into the part of the screen the panels leave clear.
+    /// Fit the drawing into the part of the screen the bar and panels leave clear.
     private func fit(_ size: CGSize, animated: Bool = false) {
-        // Not laid out yet (mid-transition): wait for the real size.
-        guard !doc.circuit.isEmpty, size.width > fitInsets.leading + fitInsets.trailing + 120,
-              size.height > fitInsets.top + fitInsets.bottom + 120 else { return }
-        let avail = CGSize(width: max(120, size.width - fitInsets.leading - fitInsets.trailing),
-                           height: max(120, size.height - fitInsets.top - fitInsets.bottom))
         // Names and values sit outside the parts, mostly above them.
-        var nt = ViewTransform.fit(doc.circuit.schBounds.insetBy(dx: -0.4, dy: -0.6), in: avail, padding: 24)
-        nt.size = size
-        nt.center.x -= (fitInsets.leading - fitInsets.trailing) / 2 / nt.scale
-        nt.center.y += (fitInsets.top - fitInsets.bottom) / 2 / nt.scale
+        guard !doc.circuit.isEmpty,
+              let nt = ViewTransform.fit(doc.circuit.schBounds.insetBy(dx: -0.4, dy: -0.6), in: size, insets: fitInsets, padding: 24)
+        else { return }
         if animated { withAnimation(.snappy) { t = nt } } else { t = nt }
         fitted = true
     }

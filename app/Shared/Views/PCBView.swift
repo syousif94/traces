@@ -11,6 +11,8 @@ struct PCBView: View {
     @State private var dragging: (name: String, start: CGPoint)?
     @State private var ghostOffset: CGPoint = .zero
     @State private var lastSize: CGSize = .zero
+    /// Set once you pan or zoom; until then the board refits whenever the view or panels change.
+    @State private var userMoved = false
     var compact = false
     /// Space covered by floating panels; the board fits in what is left.
     var fitInsets = EdgeInsets()
@@ -32,21 +34,23 @@ struct PCBView: View {
             .contentShape(Rectangle())
             .gesture(dragGesture)
             .simultaneousGesture(zoomGesture)
-            .onTapGesture(count: 2) { fit(geo.size, animated: true) }
+            .onTapGesture(count: 2) { userMoved = false; fit(geo.size, animated: true) }
             .onTapGesture { loc in tap(at: loc) }
             .contextMenu { contextMenu }
             #if os(macOS)
-            .modifier(ScrollZoom(t: $t))
+            .modifier(ScrollZoom(t: $t) { userMoved = true })
             #endif
-            .onAppear { lastSize = geo.size; t.size = geo.size; if !doc.circuit.isEmpty { fit(geo.size) } }
+            .onAppear { lastSize = geo.size; t.size = geo.size; fit(geo.size) }
             .onChange(of: geo.size) { _, s in
                 t.size = s
-                if !fitted || lastSize == .zero { fit(s) }
+                if !fitted || !userMoved || lastSize == .zero { fit(s) }
                 lastSize = s
             }
             .onChange(of: doc.circuit.elementCount) { _, _ in if !fitted { fit(geo.size) } }
-            .onChange(of: fitInsets) { _, _ in fit(geo.size, animated: true) }
-            .onChange(of: doc.fitRequested) { _, _ in fit(geo.size, animated: true) }
+            .onChange(of: fitInsets) { old, new in
+                if userMoved { t.recentre(from: old, to: new) } else { fit(geo.size) }
+            }
+            .onChange(of: doc.fitRequested) { _, _ in userMoved = false; fit(geo.size, animated: true) }
             .overlay(alignment: .bottomTrailing) { measureReadout.padding(12) }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("PCB view, \(doc.circuit.components.count) components")
@@ -54,12 +58,9 @@ struct PCBView: View {
     }
 
     private func fit(_ size: CGSize, animated: Bool = false) {
-        guard !doc.circuit.isEmpty, size.width > 0 else { return }
-        let avail = CGSize(width: max(120, size.width - fitInsets.leading - fitInsets.trailing), height: max(120, size.height - fitInsets.top - fitInsets.bottom))
-        var nt = ViewTransform.fit(doc.circuit.pcbBounds.insetBy(dx: -3, dy: -3), in: avail, padding: compact ? 16 : 40)
-        nt.size = size
-        nt.center.x -= (fitInsets.leading - fitInsets.trailing) / 2 / nt.scale
-        nt.center.y += (fitInsets.top - fitInsets.bottom) / 2 / nt.scale
+        guard !doc.circuit.isEmpty,
+              let nt = ViewTransform.fit(doc.circuit.pcbBounds.insetBy(dx: -3, dy: -3), in: size, insets: fitInsets, padding: compact ? 16 : 40)
+        else { return }
         if animated { withAnimation(.snappy) { t = nt } } else { t = nt }
         fitted = true
     }
@@ -74,6 +75,7 @@ struct PCBView: View {
                         dragging = (c.name, c.center)
                     } else {
                         panStart = t.center
+                        userMoved = true
                     }
                 }
                 if let d = dragging {
@@ -107,7 +109,7 @@ struct PCBView: View {
     private var zoomGesture: some Gesture {
         MagnifyGesture()
             .onChanged { v in
-                if zoomStart == nil { zoomStart = t.scale }
+                if zoomStart == nil { zoomStart = t.scale; userMoved = true }
                 let anchor = t.toBoard(v.startLocation)
                 let newScale = min(400, max(1, (zoomStart ?? t.scale) * v.magnification))
                 // Keep the pinch point fixed.
@@ -163,20 +165,24 @@ struct PCBView: View {
 }
 
 #if os(macOS)
-/// Trackpad/mouse: two-finger scroll pans, ⌘-scroll zooms.
+/// Trackpad/mouse: two-finger scroll pans, ⌘-scroll zooms about the pointer.
 struct ScrollZoom: ViewModifier {
     @Binding var t: ViewTransform
+    var moved: () -> Void = {}
     @State private var monitor: Any?
-    @State private var hovering = false
+    @State private var pointer: CGPoint?
     func body(content: Content) -> some View {
         content
-            .onHover { hovering = $0 }
+            .onContinuousHover { phase in
+                if case .active(let p) = phase { pointer = p } else { pointer = nil }
+            }
             .onAppear {
                 monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { e in
-                    guard hovering else { return e }
+                    guard let p = pointer else { return e }
+                    moved()
                     if e.modifierFlags.contains(.command) {
                         let f = 1 + e.scrollingDeltaY * 0.01
-                        t.scale = min(400, max(1, t.scale * f))
+                        t.zoom(to: min(400, max(1, t.scale * f)), about: p)
                     } else {
                         t.center.x -= e.scrollingDeltaX / t.scale
                         t.center.y += e.scrollingDeltaY / t.scale

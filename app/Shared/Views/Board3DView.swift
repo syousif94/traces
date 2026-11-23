@@ -6,16 +6,38 @@ import SwiftUI
 struct Board3DView: View {
     @Bindable var doc: DocumentModel
 
+    /// Width over height of the view (it is stretched past the panels; the camera's field of view is
+    /// fixed vertically), so a narrow view gets a smaller board.
+    @State private var aspect: Float = 1
+
     var body: some View {
         RealityView { content in
-            content.add(Self.makeBoard(doc.circuit))
+            content.add(Self.posed(doc.circuit, aspect: aspect))
         } update: { content in
             content.entities.removeAll()
-            content.add(Self.makeBoard(doc.circuit))
+            content.add(Self.posed(doc.circuit, aspect: aspect))
         }
         .realityViewCameraControls(.orbit)
+        .onGeometryChange(for: Float.self) { g in Float(g.size.width / max(g.size.height, 1)) } action: { aspect = $0 }
         .background(Palette.threeD.canvas)
         .accessibilityLabel("3D board view")
+    }
+
+    /// The board turned to a three-quarter view (the camera starts square-on from the front, which
+    /// would show only its edge); orbiting starts from there.
+    @MainActor
+    static func posed(_ m: CircuitModel, aspect: Float = 1) -> Entity {
+        let e = makeBoard(m)
+        // Scale the board so its long side is a fixed share of the frame, whatever its size in mm.
+        let long = Float(max(m.boardSize.width, m.boardSize.height)) * 0.01
+        let target: Float = 0.95 * min(max(aspect, 0.6), 1.3)
+        if long > 0 { e.scale = .init(repeating: target / long) }
+        let yaw = simd_quatf(angle: -.pi / 9, axis: [0, 1, 0])
+        let tilt = simd_quatf(angle: .pi / 4, axis: [1, 0, 0])
+        let holder = Entity()
+        holder.addChild(e)
+        holder.orientation = tilt * yaw
+        return holder
     }
 
     @MainActor

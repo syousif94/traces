@@ -20,6 +20,32 @@ struct ViewTransform: Equatable {
         return ViewTransform(center: CGPoint(x: rect.midX, y: rect.midY), scale: max(0.5, s), size: size)
     }
 
+    /// Fit `rect` into the part of a `size` view that `insets` leave open, centred there.
+    /// Nil until the view is big enough to hold anything (mid-layout or mid-transition).
+    static func fit(_ rect: CGRect, in size: CGSize, insets: EdgeInsets, padding: CGFloat) -> ViewTransform? {
+        let w = size.width - insets.leading - insets.trailing, h = size.height - insets.top - insets.bottom
+        guard w > 120, h > 120 else { return nil }
+        var t = fit(rect, in: CGSize(width: w, height: h), padding: padding)
+        t.size = size
+        t.center.x -= (insets.leading - insets.trailing) / 2 / t.scale
+        t.center.y += (insets.top - insets.bottom) / 2 / t.scale
+        return t
+    }
+
+    /// Keep what was in the middle of the open area there when the panels change it.
+    mutating func recentre(from old: EdgeInsets, to new: EdgeInsets) {
+        center.x -= ((new.leading - new.trailing) - (old.leading - old.trailing)) / 2 / scale
+        center.y += ((new.top - new.bottom) - (old.top - old.bottom)) / 2 / scale
+    }
+
+    /// Zoom keeping the board point under `screen` where it is.
+    mutating func zoom(to newScale: CGFloat, about screen: CGPoint) {
+        let before = toBoard(screen)
+        scale = newScale
+        let after = toBoard(screen)
+        center = CGPoint(x: center.x + before.x - after.x, y: center.y + before.y - after.y)
+    }
+
     /// Grid step in mm for the zoom: 0.1 / 0.5 / 1 / 5 / 10.
     var gridStep: CGFloat {
         for s: CGFloat in [0.1, 0.5, 1, 5, 10] where s * scale >= 14 { return s }

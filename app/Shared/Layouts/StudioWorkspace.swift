@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// The board studio, laid out like Nurby's part studio on every device: the live view full-bleed,
-/// back + the Schematic / PCB / 3D / Code switcher top left, the board tools floating at the
-/// bottom, and one sidebar on the right: the drawer (parts, layers, files, history, or the parts
+/// one bar floating at the bottom (back, the Schematic / PCB / 3D / Code switcher, the view's
+/// tools, PCB layers, DRC and the panels button; drag it up or down to resize or hide the
+/// panels), and one sidebar on the right: the drawer (parts, layers, files, history, or the parts
 /// library) above the agent. Drag the gap between them to share the height; drag the gap or the
 /// sidebar's left edge sideways to put it away, and pull it back from the right edge. When the
 /// window is taller than wide the two panels sit side by side along the bottom instead (drag their
@@ -30,6 +31,8 @@ struct StudioWorkspace: View {
     /// Which bottom panel is in view when they page sideways (0 selected, 1 drawer, 2 agent).
     @State private var dockPage: Int? = 1
     @State private var keyboardUp = false
+    /// A drag on the bar is resizing the panels (vertical) rather than scrolling it.
+    @State private var barAxis: Axis?
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var hSize
     private var compact: Bool { hSize == .compact }
@@ -45,7 +48,8 @@ struct StudioWorkspace: View {
     private let sidebarWidth: CGFloat = 380
     private let margin: CGFloat = 12
     private let gap: CGFloat = 12
-    private let toolsBand: CGFloat = 70
+    /// The bar and the space under it.
+    private let barBand: CGFloat = 56 + 14
     private let dockPanelMax: CGFloat = 440
     private let dockPanelMin: CGFloat = 300
     #if os(macOS)
@@ -69,7 +73,6 @@ struct StudioWorkspace: View {
     private var sidebarAway: Bool { docked ? dockOffset > 0 : sidebarOffset > 0 }
     /// Width the side sidebar covers (0 when docked or put away).
     private var sideCover: CGFloat { docked ? 0 : max(sidebarWidth + margin * 2 - sidebarOffset, 0) }
-    private var showsTools: Bool { doc.viewMode == .pcb || doc.viewMode == .schematic }
 
     private var palette: Palette { .for(doc.viewMode) }
 
@@ -79,8 +82,8 @@ struct StudioWorkspace: View {
             LiveView(doc: doc, compact: narrow, fitInsets: fitInsets)
                 .ignoresSafeArea()
 
-            tools
-            topOverlay
+            selectionOverlay
+            bar
 
             if docked { dock } else { side }
         }
@@ -111,27 +114,25 @@ struct StudioWorkspace: View {
         #endif
     }
 
-    /// What the floating panels cover, for fitting the board into the rest.
+    /// What the bar and panels cover: the views fit, centre and zoom the board in the rest. The views
+    /// ignore the safe area but the bar keeps above it, so its bottom inset counts.
     private var fitInsets: EdgeInsets {
-        EdgeInsets(top: 76 + topInset, leading: 0,
-                   bottom: docked ? dockVisible + toolsBand + margin : (showsTools ? 84 : margin),
+        EdgeInsets(top: margin + topInset, leading: 0,
+                   bottom: (typingDocked ? 0 : barBand + insets.bottom) + dockVisible + margin,
                    trailing: sideCover)
     }
 
-    // MARK: Top
+    // MARK: Selection
 
-    /// Back and the view switcher top left; DRC top right of the open area; the selected part
-    /// under them.
-    private var topOverlay: some View {
+    private var showsSelectionCard: Bool {
+        doc.viewMode == .pcb && doc.selection != nil && !(docked && dockPaged && dockOffset == 0)
+    }
+
+    /// The selected part's exact position, top left of the open area.
+    private var selectionOverlay: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 10) {
-                    backButton
-                    ViewSwitcher(doc: doc, short: narrow)
-                    Spacer(minLength: 0)
-                    DRCPill(doc: doc, compact: narrow)
-                }
-                if doc.viewMode == .pcb, doc.selection != nil, !(docked && dockPaged && dockOffset == 0) {
+            VStack(alignment: .leading) {
+                if showsSelectionCard {
                     NumberInputBar(doc: doc, vertical: true)
                         .frame(width: 350, alignment: .leading)
                         .transition(.scale(scale: 0.92, anchor: .topLeading).combined(with: .opacity))
@@ -140,57 +141,57 @@ struct StudioWorkspace: View {
             }
             .padding(margin)
             .padding(.top, topInset)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
             if !docked { Color.clear.frame(width: sideCover).allowsHitTesting(false) }
         }
         .animation(.snappy(duration: 0.25), value: doc.selection)
     }
 
-    private var backButton: some View {
-        Button(action: onClose) {
-            Image(systemName: "chevron.left").font(.system(size: 18, weight: .semibold))
-                .frame(width: 52, height: 52).contentShape(.circle)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel("All projects")
-        .help("All projects")
-    }
+    // MARK: Bar
 
-    // MARK: Tools
-
-    private var tools: some View {
+    /// The bar, centred in the part of the screen the panels leave open, above the dock.
+    private var bar: some View {
         HStack(spacing: 0) {
-            VStack {
+            VStack(spacing: 10) {
                 Spacer()
-                VStack(alignment: .trailing, spacing: 10) {
-                    if doc.tool == .place && doc.viewMode == .pcb { PlacingChip(doc: doc).frame(maxWidth: .infinity) }
-                    if narrow && sidebarAway { sidebarButton }
-                    HStack(spacing: 10) {
-                        if showsTools { ToolsBar(doc: doc, addPart: openLibrary, ask: ask) }
-                        if !narrow && sidebarAway { sidebarButton }
-                    }
-                    .frame(maxWidth: .infinity, alignment: showsTools ? .center : .trailing)
-                }
-                .padding(.horizontal, margin)
-                .padding(.bottom, 14 + dockVisible)
-                .opacity(typingDocked ? 0 : 1)
-                .allowsHitTesting(!typingDocked)
-                .animation(.easeOut(duration: 0.2), value: typingDocked)
+                if doc.tool == .place && doc.viewMode == .pcb { PlacingChip(doc: doc) }
+                StudioBar(doc: doc, short: narrow, blocked: barAxis == .vertical,
+                          panelsShown: !sidebarAway,
+                          panelsSymbol: docked ? "rectangle.bottomhalf.inset.filled" : "sidebar.right",
+                          back: onClose, addPart: openLibrary, ask: ask,
+                          togglePanels: { sidebarAway ? reveal() : hide() })
+                    .fixedSize(horizontal: false, vertical: true)
+                    .simultaneousGesture(barDrag)
             }
+            .padding(.horizontal, margin)
+            .padding(.bottom, 14 + dockVisible)
+            // While typing to the agent the keyboard takes the room the bar had.
+            .opacity(typingDocked ? 0 : 1)
+            .allowsHitTesting(!typingDocked)
+            .animation(.easeOut(duration: 0.2), value: typingDocked)
             .frame(maxWidth: .infinity)
             if !docked { Color.clear.frame(width: sideCover).allowsHitTesting(false) }
         }
     }
 
-    private var sidebarButton: some View {
-        Button { reveal() } label: {
-            Image(systemName: docked ? "rectangle.bottomhalf.inset.filled" : "sidebar.right").font(.system(size: 18))
-                .frame(width: 52, height: 52).contentShape(.circle)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel("Show sidebar")
+    /// Up or down on the bar does what the panels' top edge does: resize them, or drag them away
+    /// and back. In the side layout, down puts the sidebar away and up brings it back. Sideways
+    /// drags are left to the bar's own scrolling, and taps to its buttons.
+    private var barDrag: some Gesture {
+        DragGesture(minimumDistance: 8, coordinateSpace: .global)
+            .onChanged { v in
+                if barAxis == nil { barAxis = abs(v.translation.height) > abs(v.translation.width) ? .vertical : .horizontal }
+                if barAxis == .vertical && docked { dockResize(v) }
+            }
+            .onEnded { v in
+                if barAxis == .vertical {
+                    if docked { dockSettle(v) }
+                    else if v.predictedEndTranslation.height > 60 { hide() }
+                    else if v.predictedEndTranslation.height < -60 { reveal() }
+                }
+                // Let go after the button under the finger has seen the lift (and stayed blocked).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { barAxis = nil }
+            }
     }
 
     // MARK: Panels
