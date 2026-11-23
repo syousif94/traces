@@ -1,0 +1,12 @@
+{
+  "version": "0.1.0",
+  "build": "202611232116",
+  "tag": "v0.1.0",
+  "date": "2026-11-23T21:18:03Z",
+  "repo": "syousif94/traces",
+  "dmg": "https://github.com/syousif94/traces/releases/download/v0.1.0/Traces.dmg",
+  "zip": "https://github.com/syousif94/traces/releases/download/v0.1.0/Traces.zip",
+  "dmgSize": 13990527,
+  "minimumSystemVersion": "26.0",
+  "notarized": true
+}
